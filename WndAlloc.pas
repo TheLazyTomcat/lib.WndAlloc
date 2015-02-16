@@ -2,7 +2,7 @@
 {                                                                              }
 {   WndAlloc                                                                   }
 {                                                                              }
-{   ©František Milt 2015-02-15                                                 }
+{   ©František Milt 2015-02-16                                                 }
 {                                                                              }
 {   Version 1.0                                                                }
 {                                                                              }
@@ -44,20 +44,57 @@ const
 type
 {$IFDEF x64}
   PtrUInt = UInt64;
-{$ELSE}
-  PtrUInt = LongWord;
-{$ENDIF}
 
   TMediator = packed record
-    POP_Reg:          Byte;
-    PUSH_MethodData:  Byte;
-    MethodData:       Pointer;
-    PUSH_MethodCode:  Byte;
+    MOV_MethodInfo:   Array[0..1] of Byte;
+    MethodInfo:       Pointer;
+    MOV_HandlerAddr:  Array[0..1] of Byte;
+    HandlerAddr:      Pointer;
+    JMP_Reg:          Array[0..2] of Byte;
     MethodCode:       Pointer;
-    PUSH_Reg:         Byte;
-    JMP_Handler:      Byte;
-    HandlerOffset:    Pointer;
+    MethodData:       Pointer;
   end;
+
+const
+  def_Mediator: TMediator = (
+    MOV_MethodInfo:   ($49,$ba);      //  MOV   R10,  qword
+    MethodInfo:       nil;
+    MOV_HandlerAddr:  ($48,$b8);      //  MOV   RAX,  qword
+    HandlerAddr:      nil;
+    JMP_Reg:          ($48,$ff,$e0);  //  JMP   RAX
+    MethodCode:       nil;
+    MethodData:       nil;
+  );
+{$ELSE}
+  PtrUInt = LongWord;
+
+  TMediator = packed record
+    POP_ReturnAddr:   Byte;
+    PUSH_MethodInfo:  Byte;
+    MethodInfo:       Pointer;
+    PUSH_ReturnAddr:  Byte;
+    MOV_HandlerAddr:  Byte;
+    HandlerAddr:      Pointer;
+    JMP_Reg:          Array[0..1] of Byte;
+    MethodCode:       Pointer;
+    MethodData:       Pointer;
+   end;
+
+const
+  def_Mediator: TMediator = (
+    POP_ReturnAddr:   $58;        //  POP   EAX
+    PUSH_MethodInfo:  $68;        //  PUSH  dword
+    MethodInfo:       nil;
+    PUSH_ReturnAddr:  $50;        //  PUSH  EAX
+    MOV_HandlerAddr:  $b8;        //  MOV   EAX,  dword
+    HandlerAddr:      nil;
+    JMP_Reg:          ($ff,$e0);  //  JMP   EAX
+    MethodCode:       nil;
+    MethodData:       nil;
+  );
+{$ENDIF}
+
+type
   PMediator = ^TMediator;
 
   TMediators = Array[0..Pred(MaxMediators)] of TMediator;
@@ -96,13 +133,17 @@ end;
 
 //==============================================================================
 
-Function WndHandler(MethodCode, MethodData: Pointer; Window: HWND; Message: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+{$IFDEF x64}
+Function WndHandler(Window: HWND; Message: UINT; wParam: WPARAM; lParam: LPARAM; MethodInfo: Pointer): LRESULT;
+{$ELSE}
+Function WndHandler(MethodInfo: Pointer; Window: HWND; Message: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+{$ENDIF}
 var
   WndProc:  TMethod;
   Msg:      TMessage;
 begin
-WndProc.Code := MethodCode;
-WndProc.Data := MethodData;
+WndProc.Data := TMethod(MethodInfo^).Data;
+WndProc.Code := TMethod(MethodInfo^).Code;
 If Assigned(TWndMethod(WndProc)) then
   begin
     Msg.msg := Message;
@@ -114,6 +155,21 @@ If Assigned(TWndMethod(WndProc)) then
 else Result := DefWindowProc(Window,Message,wParam,lParam);
 end;
 
+{$IFDEF x64}
+{$IFDEF FPC}{$ASMMODE intel}{$ENDIF}
+procedure HandlerCaller; assembler;
+asm
+  SUB   RSP,  $8
+  PUSH  R10
+  PUSH  R9
+  PUSH  R8
+  PUSH  RDX
+  PUSH  RCX
+  CALL  WndHandler
+  ADD   RSP,  $30
+end;
+{$ENDIF}
+
 //==============================================================================
 
 Function TUtilityWindowsManager.NewMediator(Method: TMethod): PMediator;
@@ -121,16 +177,17 @@ var
   i:  Integer;
 begin
 For i := 0 to Pred(MaxMediators) do
-  If not Assigned(fMediators^[i].HandlerOffset) then
+  If not Assigned(fMediators^[i].MethodInfo) then
     begin
-      fMediators^[i].POP_Reg := $58;
-      fMediators^[i].PUSH_MethodData := $68;
-      fMediators^[i].MethodData := Method.Data;
-      fMediators^[i].PUSH_MethodCode := $68;
+      fMediators^[i] := def_Mediator;
+      fMediators^[i].MethodInfo := Addr(fMediators^[i].MethodCode);
+    {$IFDEF x64}
+      fMediators^[i].HandlerAddr := @HandlerCaller;
+    {$ELSE}
+      fMediators^[i].HandlerAddr := @WndHandler;
+    {$ENDIF}
       fMediators^[i].MethodCode := Method.Code;
-      fMediators^[i].PUSH_Reg := $50;
-      fMediators^[i].JMP_Handler := $E9;
-      fMediators^[i].HandlerOffset := {%H-}Pointer(PtrUInt(@WndHandler) - (PtrUInt(Addr(fMediators^[i].HandlerOffset)) + SizeOf(Pointer)));
+      fMediators^[i].MethodData := Method.Data;
       Result := Addr(fMediators^[i]);
       Break;
     end;
@@ -142,7 +199,7 @@ procedure TUtilityWindowsManager.RemoveMediator(Mediator: PMediator);
 begin
 If {%H-}(PtrUInt(Mediator) >= PtrUInt(fMediators)) and
    {%H-}(PtrUInt(Mediator) < (PtrUInt(fMediators) + SizeOf(TMediators))) then
-  Mediator^.HandlerOffset := nil;
+  Mediator^.MethodInfo := nil;
 end;
 
 //------------------------------------------------------------------------------
@@ -192,7 +249,7 @@ try
       If Result = 0 then
         raise Exception.CreateFmt('TUtilityWindowsManager.AllocateHWND: Unable to create hidden window. %s',[SysErrorMessage(GetLastError)]);
     {$IFDEF FPC}
-      SetWindowLongPtr(Result,GWL_WNDPROC,{%H-}PtrUInt(NewMediator(TMethod(Method))));
+      SetWindowLongPtr(Result,GWL_WNDPROC,{%H-}LONG_PTR(NewMediator(TMethod(Method))));
     {$ELSE}
       SetWindowLongPtr(Result,GWL_WNDPROC,NewMediator(TMethod(Method)));
     {$ENDIF}
@@ -213,7 +270,7 @@ begin
 fSynchronizer.Enter;
 try
 {$IFDEF FPC}
-  Mediator := {%H-}Pointer(GetWindowLongPtr(Wnd,GWL_WNDPROC));
+  Mediator := {%H-}PMediator(GetWindowLongPtr(Wnd,GWL_WNDPROC));
 {$ELSE}
   Mediator := GetWindowLongPtr(Wnd,GWL_WNDPROC);
 {$ENDIF}
