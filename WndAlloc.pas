@@ -51,6 +51,7 @@ type
     MOV_HandlerAddr:  Array[0..1] of Byte;
     HandlerAddr:      Pointer;
     JMP_Reg:          Array[0..2] of Byte;
+    _padding:         Byte;
     MethodCode:       Pointer;
     MethodData:       Pointer;
   end;
@@ -62,6 +63,7 @@ const
     MOV_HandlerAddr:  ($48,$b8);      //  MOV   RAX,  qword
     HandlerAddr:      nil;
     JMP_Reg:          ($48,$ff,$e0);  //  JMP   RAX
+    _padding:         $00;
     MethodCode:       nil;
     MethodData:       nil;
   );
@@ -76,6 +78,7 @@ const
     MOV_HandlerAddr:  Byte;
     HandlerAddr:      Pointer;
     JMP_Reg:          Array[0..1] of Byte;
+    _padding:         Array[0..1] of  Byte;
     MethodCode:       Pointer;
     MethodData:       Pointer;
    end;
@@ -89,6 +92,7 @@ const
     MOV_HandlerAddr:  $b8;        //  MOV   EAX,  dword
     HandlerAddr:      nil;
     JMP_Reg:          ($ff,$e0);  //  JMP   EAX
+    _padding:         ($00,$00);
     MethodCode:       nil;
     MethodData:       nil;
   );
