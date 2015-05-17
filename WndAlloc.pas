@@ -208,8 +208,8 @@ end;
 
 procedure TUtilityWindowsManager.RemoveMediator(Mediator: PMediator);
 begin
-If {%H-}(PtrUInt(Mediator) >= PtrUInt(fMediators)) and
-   {%H-}(PtrUInt(Mediator) < (PtrUInt(fMediators) + SizeOf(TMediators))) then
+If ({%H-}PtrUInt(Mediator) >= {%H-}PtrUInt(fMediators)) and
+   ({%H-}PtrUInt(Mediator) < ({%H-}PtrUInt(fMediators) + SizeOf(TMediators))) then
   Mediator^.MethodInfo := nil;
 end;
 
