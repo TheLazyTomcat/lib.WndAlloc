@@ -9,12 +9,28 @@
 {                                                                              }
 {   WndAlloc                                                                   }
 {                                                                              }
-{   ©František Milt 2015-02-16                                                 }
+{   ©František Milt 2015-12-12                                                 }
 {                                                                              }
-{   Version 1.0                                                                }
+{   Version 1.0.1                                                              }
 {                                                                              }
 {==============================================================================}
 unit WndAlloc;
+
+{$IF defined(CPUX86_64) or defined(CPUX64)}
+  {$DEFINE x64}
+{$ELSEIF defined(CPU386)}
+  {$DEFINE x86}
+{$ELSE}
+  {$MESSAGE FATAL 'Unsupported CPU.'}
+{$IFEND}
+
+{$IF not(defined(WINDOWS) or defined(MSWINDOWS))}
+  {$MESSAGE FATAL 'Unsupported operating system.'}
+{$IFEND}
+
+{$IFDEF FPC}
+  {$ASMMODE Intel}
+{$ENDIF}
 
 interface
 
@@ -27,18 +43,24 @@ procedure DeallocateHWND(Wnd: HWND);
 implementation
 
 uses
-  Messages, SysUtils, SyncObjs;
+  Messages, SysUtils, SyncObjs, AuxTypes;
 
-{$IF not Defined(FPC) and (RTLVersion <= 15) and not Defined(x64)}
-Function GetWindowLongPtr(hWnd: HWND; nIndex: LongInt): Pointer;
+{$IF not(declared(GetWindowLongPtr) and declared(SetWindowLongPtr))}
+
+{$IF SizeOf(Pointer) <> 4}
+  {$MESSAGE FATAL 'Unsupported platform.'}
+{$IFEND}
+
+Function GetWindowLongPtr(hWnd: HWND; nIndex: Int32): Pointer;
 begin
 Result := Pointer(GetWindowLong(hWnd,nIndex));
 end;
 
-Function SetWindowLongPtr(hWnd: HWND; nIndex: LongInt; dwNewLong: Pointer): Pointer;
+Function SetWindowLongPtr(hWnd: HWND; nIndex: Int32; dwNewLong: Pointer): Pointer;
 begin
-Result := Pointer(SetWindowLong(hWnd,nIndex,LongInt(dwNewLong)));
+Result := Pointer(SetWindowLong(hWnd,nIndex,Int32(dwNewLong)));
 end;
+
 {$IFEND}
 
 //------------------------------------------------------------------------------
@@ -50,14 +72,12 @@ const
 
 type
 {$IFDEF x64}
-  PtrUInt = UInt64;
-
   TMediator = packed record
-    MOV_MethodInfo:   Array[0..1] of Byte;
+    MOV_MethodInfo:   array[0..1] of Byte;
     MethodInfo:       Pointer;
-    MOV_HandlerAddr:  Array[0..1] of Byte;
+    MOV_HandlerAddr:  array[0..1] of Byte;
     HandlerAddr:      Pointer;
-    JMP_Reg:          Array[0..2] of Byte;
+    JMP_Reg:          array[0..2] of Byte;
     _padding:         Byte;
     MethodCode:       Pointer;
     MethodData:       Pointer;
@@ -75,8 +95,6 @@ const
     MethodData:       nil;
   );
 {$ELSE}
-  PtrUInt = LongWord;
-
   TMediator = packed record
     POP_ReturnAddr:   Byte;
     PUSH_MethodInfo:  Byte;
@@ -84,8 +102,8 @@ const
     PUSH_ReturnAddr:  Byte;
     MOV_HandlerAddr:  Byte;
     HandlerAddr:      Pointer;
-    JMP_Reg:          Array[0..1] of Byte;
-    _padding:         Array[0..1] of  Byte;
+    JMP_Reg:          array[0..1] of Byte;
+    _padding:         array[0..1] of Byte;
     MethodCode:       Pointer;
     MethodData:       Pointer;
    end;
@@ -108,7 +126,7 @@ const
 type
   PMediator = ^TMediator;
 
-  TMediators = Array[0..Pred(MaxMediators)] of TMediator;
+  TMediators = array[0..Pred(MaxMediators)] of TMediator;
   PMediators = ^TMediators;
 
   TUtilityWindowsManager = class(TObject)
@@ -167,7 +185,6 @@ else Result := DefWindowProc(Window,Message,wParam,lParam);
 end;
 
 {$IFDEF x64}
-{$IFDEF FPC}{$ASMMODE intel}{$ENDIF}
 procedure HandlerCaller; assembler;
 asm
   SUB   RSP,  $8
@@ -200,8 +217,9 @@ For i := 0 to Pred(MaxMediators) do
       fMediators^[i].MethodCode := Method.Code;
       fMediators^[i].MethodData := Method.Data;
       Result := Addr(fMediators^[i]);
-      Break;
+      Exit;
     end;
+raise Exception.Create('TUtilityWindowsManager.NewMediator: Out of resources.');
 end;
 
 //------------------------------------------------------------------------------
