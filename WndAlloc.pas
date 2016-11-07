@@ -29,6 +29,7 @@ unit WndAlloc;
 {$IFEND}
 
 {$IFDEF FPC}
+  {$MODE ObjFPC}{$H+}
   {$ASMMODE Intel}
 {$ENDIF}
 
