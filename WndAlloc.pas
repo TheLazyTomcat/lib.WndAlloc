@@ -97,6 +97,8 @@ unit WndAlloc;
   {$ENDIF}
 {$ENDIF}
 
+{$TYPEINFO ON}
+
 {
   ImplicitManager
 
