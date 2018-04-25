@@ -95,6 +95,7 @@ unit WndAlloc;
   {$IFNDEF PurePascal}
     {$ASMMODE Intel}
   {$ENDIF}
+  {$DEFINE FPC_DisableWarns}
 {$ENDIF}
 
 {$TYPEINFO ON}
@@ -169,6 +170,11 @@ implementation
 uses
   Messages, SysUtils, AuxTypes;
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 4055 OFF} // Conversion between ordinals and pointers is not portable
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+{$ENDIF}
+
 {==============================================================================}
 {   Auxiliary functions, types, constants, ...                                 }
 {==============================================================================}
@@ -241,7 +247,7 @@ var
   Msg:        TMessage;
   MethodInfo: Pointer;
 begin
-MethodInfo := Addr({%H-}PMethodItem(GetWindowLongPtr(Window,GWLP_USERDATA))^.Method);
+MethodInfo := Addr(PMethodItem(GetWindowLongPtr(Window,GWLP_USERDATA))^.Method);
 If Assigned(TWndMethod(TMethod(MethodInfo^))) then
   begin
     Msg.msg := Message;
@@ -430,7 +436,7 @@ var
   WindowClass:  TWndClass;
 begin
 ZeroMemory(@WindowClass,SizeOf(TWndClass));
-Registered := Windows.GetClassInfo(hInstance,PChar(fWindowClassName),{%H-}TempClass);
+Registered := Windows.GetClassInfo(hInstance,PChar(fWindowClassName),TempClass);
 If not Registered or (TempClass.lpfnWndProc <> @DefWindowProc) then
   begin
     If Registered then
@@ -461,7 +467,7 @@ var
 begin
 For i := 0 to Pred(fMaxWindows) do
   begin
-    Temp := {%H-}PMethodItem({%H-}PtrUInt(fHelpers) + PtrUInt(i * SizeOf(TMethodItem)));
+    Temp := PMethodItem(PtrUInt(fHelpers) + PtrUInt(i * SizeOf(TMethodItem)));
     If Temp^.Assigned = 0 then
       begin
         Temp^.Method := Method;
@@ -475,7 +481,7 @@ For i := 0 to Pred(fMaxWindows) do
 begin
 For i := 0 to Pred(fMaxWindows) do
   begin
-    Temp := {%H-}PMediator({%H-}PtrUInt(fHelpers) + PtrUInt(i * SizeOf(TMediator)));
+    Temp := PMediator(PtrUInt(fHelpers) + PtrUInt(i * SizeOf(TMediator)));
     If not Assigned(Temp^.MethodInfo) then
       begin
         Temp^ := def_Mediator;
@@ -500,13 +506,13 @@ end;
 procedure TUtilityWindowManager.RemoveHelper(Helper: Pointer);
 begin
 {$IFDEF PurePascal}
-If ({%H-}PtrUInt(Helper) >= {%H-}PtrUInt(fHelpers)) and
-   ({%H-}PtrUInt(Helper) <= ({%H-}PtrUInt(fHelpers) +
+If (PtrUInt(Helper) >= PtrUInt(fHelpers)) and
+   (PtrUInt(Helper) <= (PtrUInt(fHelpers) +
     PtrUInt(Pred(fMaxWindows) * SizeOf(TMethodItem)))) then
   PMethodItem(Helper)^.Assigned := 0;
 {$ELSE}
-If ({%H-}PtrUInt(Helper) >= {%H-}PtrUInt(fHelpers)) and
-   ({%H-}PtrUInt(Helper) <= ({%H-}PtrUInt(fHelpers) +
+If (PtrUInt(Helper) >= PtrUInt(fHelpers)) and
+   (PtrUInt(Helper) <= (PtrUInt(fHelpers) +
     PtrUInt(Pred(fMaxWindows) * SizeOf(TMediator)))) then
   PMediator(Helper)^.MethodInfo := nil;
 {$ENDIF}
@@ -560,10 +566,10 @@ try
         raise Exception.CreateFmt('TUtilityWindowManager.AllocateHWND: ' +
           'Unable to create utility window. %s',[SysErrorMessage(GetLastError)]);
     {$IFDEF PurePascal}
-      SetWindowLongPtr(Result,GWLP_WNDPROC,{%H-}LONG_PTR(@WndHandler));
-      SetWindowLongPtr(Result,GWLP_USERDATA,{%H-}LONG_PTR(NewHelper(TMethod(Method))));
+      SetWindowLongPtr(Result,GWLP_WNDPROC,LONG_PTR(@WndHandler));
+      SetWindowLongPtr(Result,GWLP_USERDATA,LONG_PTR(NewHelper(TMethod(Method))));
     {$ELSE}
-      SetWindowLongPtr(Result,GWLP_WNDPROC,{%H-}LONG_PTR(NewHelper(TMethod(Method))));
+      SetWindowLongPtr(Result,GWLP_WNDPROC,LONG_PTR(NewHelper(TMethod(Method))));
     {$ENDIF}
       Inc(fWindowCount);
     end
@@ -582,9 +588,9 @@ begin
 fSynchronizer.Enter;
 try
 {$IFDEF PurePascal}
-  Helper := {%H-}Pointer(GetWindowLongPtr(Wnd,GWLP_USERDATA));
+  Helper := Pointer(GetWindowLongPtr(Wnd,GWLP_USERDATA));
 {$ELSE}
-  Helper := {%H-}Pointer(GetWindowLongPtr(Wnd,GWLP_WNDPROC));
+  Helper := Pointer(GetWindowLongPtr(Wnd,GWLP_WNDPROC));
 {$ENDIF}
   DestroyWindow(Wnd);
   RemoveHelper(Helper);
