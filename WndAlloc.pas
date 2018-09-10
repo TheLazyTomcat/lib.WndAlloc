@@ -410,8 +410,9 @@ end;
 //------------------------------------------------------------------------------
 
 {$IFDEF x64}
-procedure HandlerCaller; assembler;
+procedure HandlerCaller; assembler;{$IFDEF FPC} nostackframe; {$ENDIF}
 asm
+{$IFNDEF FPC}.NOFRAME{$ENDIF}
   SUB   RSP,  8
   PUSH  R10
   PUSH  R9
