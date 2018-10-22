@@ -9,9 +9,9 @@
 
   WndAlloc
 
-  ©František Milt 2017-06-11
+  ©František Milt 2018-10-22
 
-  Version 1.1
+  Version 1.1.1
 
   Dependencies:
     AuxTypes - github.com/ncs-sniper/Lib.AuxTypes
@@ -92,14 +92,20 @@ unit WndAlloc;
 
 {$IFDEF FPC}
   {$MODE ObjFPC}{$H+}
+  {$INLINE ON}
+  {$DEFINE CanInline}
   {$IFNDEF PurePascal}
     {$ASMMODE Intel}
   {$ENDIF}
   {$DEFINE FPC_DisableWarns}
   {$MACRO ON}
+{$ELSE}
+  {$IF CompilerVersion >= 17 then}  // Delphi 2005+
+    {$DEFINE CanInline}
+  {$ELSE}
+    {$UNDEF CanInline}
+  {$IFEND}
 {$ENDIF}
-
-{$TYPEINFO ON}
 
 {
   ImplicitManager
@@ -151,7 +157,6 @@ type
     destructor Destroy; override;
     Function AllocateHWND(Method: TWndMethod): HWND; virtual;
     procedure DeallocateHWND(Wnd: HWND); virtual;
-  published
     property WindowClassName: String read fWindowClassName;
     property MaxWindows: Integer read fMaxWindows;
     property WindowCount: Integer read fWindowCount;
@@ -162,8 +167,8 @@ type
 {==============================================================================}
 
 {$IFDEF ImplicitManager}
-  Function AllocateHWND(Method: TWndMethod): HWND;
-  procedure DeallocateHWND(Wnd: HWND);
+  Function AllocateHWND(Method: TWndMethod): HWND;{$IF Defined(CanInline) and Defined(FPC)} inline; {$IFEND}
+  procedure DeallocateHWND(Wnd: HWND);{$IF Defined(CanInline) and Defined(FPC)} inline; {$IFEND}
 {$ENDIF}
 
 implementation
