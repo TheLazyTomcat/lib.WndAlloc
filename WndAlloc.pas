@@ -250,7 +250,7 @@ end;
 type
   TMediator = packed record
   {$IFDEF x64}
-    MOV_RAX_MethodInfo:   array[0..1] of Byte;
+    MOV_RAX_MethodAddr:   array[0..1] of Byte;
     MethodAddr:           Pointer;
     MOVQ_XMM0_RAX:        array[0..4] of Byte;
     MOV_RAX_HandlerAddr:  array[0..1] of Byte;
@@ -258,7 +258,7 @@ type
     JMP_RAX:              array[0..1] of Byte;
     Padding:              array[0..4] of Byte;
   {$ELSE}
-    MOV_EAX_MethodInfo:   Byte;
+    MOV_EAX_MethodAddr:   Byte;
     MethodAddr:           Pointer;
     MOVD_XMM0_EAX:        array[0..3] of Byte;
     MOV_EAX_HandlerAddr:  Byte;
@@ -272,15 +272,15 @@ type
 const
   WA_MEDIATOR_DEF: TMediator = (
   {$IFDEF x64}
-    MOV_RAX_MethodInfo:   ($48,$B8);              //  MOV     RAX,    MethodAddr
+    MOV_RAX_MethodAddr:   ($48,$B8);              //  MOV     RAX,    MethodAddr
     MethodAddr:           nil;
-    MOVQ_XMM0_RAX:        ($66,$48,$0F,$6E,$C0);  //  MOVD    XMM0,   EAX
+    MOVQ_XMM0_RAX:        ($66,$48,$0F,$6E,$C0);  //  MOVD    XMM0,   RAX
     MOV_RAX_HandlerAddr:  ($48,$B8);              //  MOV     RAX,    HandlerAddr
     HandlerAddr:          nil;
     JMP_RAX:              ($FF,$E0);              //  JMP     RAX
     Padding:              (0,0,0,0,0);
   {$ELSE}
-    MOV_EAX_MethodInfo:   $B8;                    //  MOV     EAX,    MethodAddr
+    MOV_EAX_MethodAddr:   $B8;                    //  MOV     EAX,    MethodAddr
     MethodAddr:           nil;
     MOVD_XMM0_EAX:        ($66,$0F,$6E,$C0);      //  MOVD    XMM0,   EAX
     MOV_EAX_HandlerAddr:  $B8;                    //  MOV     EAX,    HandlerAddr
@@ -367,6 +367,7 @@ procedure TUtilityWindowManager.RegisterWindowClass;
 var
   WindowClass:  TWndClass;
 begin
+ZeroMemory(@WindowClass,SizeOf(TWndClass));
 // unregister window class if it is already registered
 If Windows.GetClassInfo(hInstance,PChar(StrToWin(fWindowClassName)),WindowClass) then
   Windows.UnregisterClass(PChar(StrToWin(fWindowClassName)),hInstance);
