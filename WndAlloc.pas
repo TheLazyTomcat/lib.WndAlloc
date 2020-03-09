@@ -48,7 +48,7 @@
       When the window requires handler function to process a message, it calls
       the mediator as it is assigned as the handler function, mediator stores
       pointer to information about handler method into XMM0 register (SSE
-      register, unused at this point) and then passes execution a universal
+      register, unused at this point) and then passes execution to an universal
       function.
       This universal function (common for all windows) loads information stored
       in XMM0 register and uses it to call proper handling method.
@@ -56,11 +56,11 @@
       This solution is sligtly faster than the pascal one, but it is a nasty
       hack and requires the use of SSE2 instruction and SSE register.
 
-  Version 1.2 (2019-09-30)
+  Version 1.2.1 (2020-03-09)
 
-  Last change 2019-09-30
+  Last change 2020-03-09
 
-  ©2015-2019 František Milt
+  ©2015-2020 František Milt
 
   Contacts:
     František Milt: frantisek.milt@gmail.com
@@ -85,6 +85,18 @@
 
 ===============================================================================}
 unit WndAlloc;
+
+{
+  WndAlloc_PurePascal
+
+  If you want to compile this unit without ASM, don't want to or cannot define
+  PurePascal for the entire project and at the same time you don't want to or
+  cannot make changes to this unit, define this symbol for the entire project
+  and this unit will be compiled in PurePascal mode.
+}
+{$IFDEF WndAlloc_PurePascal}
+  {$DEFINE PurePascal}
+{$ENDIF}
 
 {$IF defined(CPUX86_64) or defined(CPUX64)}
   {$DEFINE x64}
