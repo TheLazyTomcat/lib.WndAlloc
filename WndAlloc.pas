@@ -58,7 +58,7 @@
 
   Version 1.2.1 (2020-03-09)
 
-  Last change 2020-03-09
+  Last change 2020-08-02
 
   ©2015-2020 František Milt
 
@@ -111,7 +111,7 @@ unit WndAlloc;
 {$IFEND}
 
 {$IFDEF FPC}
-  {$MODE ObjFPC}{$H+}
+  {$MODE ObjFPC}
   {$INLINE ON}
   {$DEFINE CanInline}
   {$IFNDEF PurePascal}
@@ -126,6 +126,7 @@ unit WndAlloc;
     {$UNDEF CanInline}
   {$IFEND}
 {$ENDIF}
+{$H+}
 
 {
   ImplicitManager
