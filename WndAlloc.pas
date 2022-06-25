@@ -58,9 +58,9 @@
 
   Version 1.2.1 (2020-03-09)
 
-  Last change 2020-08-02
+  Last change 2022-06-25
 
-  ©2015-2020 František Milt
+  ©2015-2022 František Milt
 
   Contacts:
     František Milt: frantisek.milt@gmail.com
@@ -138,8 +138,14 @@ unit WndAlloc;
   be disabled.
 
   Defined by default.
+
+  To disable/undefine this symbol in a project without changing this library,
+  define project-wide symbol WndAlloc_ImplicitManager_Off.
 }
 {$DEFINE ImplicitManager}
+{$IFDEF WndAlloc_ImplicitManager_Off}
+  {$UNDEF ImplicitManager}
+{$ENDIF}
 
 interface
 
