@@ -58,7 +58,7 @@
 
   Version 1.2.1 (2020-03-09)
 
-  Last change 2022-06-25
+  Last change 2022-09-14
 
   ©2015-2022 František Milt
 
@@ -173,14 +173,13 @@ type
 
 type
   TUtilityWindowManager = class(TObject)
-  private
+  protected
     fWindowClassName: String;
     fMaxWindows:      Integer;
     fSynchronizer:    TCriticalSection;
     fWindowCount:     Integer;
     fUsesASM:         Boolean;
     fMediators:       Pointer;
-  protected
     procedure RegisterWindowClass; virtual;
     procedure UnregisterWindowClass; virtual;
     Function NewMediator(Method: TMethod): Pointer; virtual;
@@ -377,7 +376,6 @@ end;
 {===============================================================================
     TUtilityWindowManager - class implementation
 ===============================================================================}
-
 {-------------------------------------------------------------------------------
     TUtilityWindowManager - protected methods
 -------------------------------------------------------------------------------}
